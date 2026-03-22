@@ -454,7 +454,6 @@ def update_student_mentor():
         conn.close()
 
     return redirect(url_for('staff_dashboard'))
-
 @app.route('/student/dashboard')
 def student_dashboard():
     if 'user_id' not in session or session.get('role') != 'student':
@@ -469,31 +468,37 @@ def student_dashboard():
         cur.execute("SELECT * FROM leave_requests WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
         requests = cur.fetchall()
 
-        # 2. LIVE QUOTA TRACKER (Counts only 'leaves', not ODs, ignoring rejected ones)
+        # 2. LIVE QUOTA TRACKER (Sums the total DAYS taken)
         
-        # Weekly (Monday to Sunday)
+        # Weekly (Sum of days from Monday to Sunday)
         cur.execute("""
-            SELECT COUNT(*) FROM leave_requests 
+            SELECT SUM((to_date - from_date) + 1) as total 
+            FROM leave_requests 
             WHERE student_id = %s AND leave_type = 'leave' AND status != 'rejected' 
             AND from_date >= date_trunc('week', CURRENT_DATE)
         """, (user_id,))
-        weekly_leaves = cur.fetchone()['count']
+        res_w = cur.fetchone()
+        weekly_leaves = res_w['total'] if res_w['total'] else 0
 
-        # Monthly (1st to end of month)
+        # Monthly (Sum of days from 1st of month)
         cur.execute("""
-            SELECT COUNT(*) FROM leave_requests 
+            SELECT SUM((to_date - from_date) + 1) as total 
+            FROM leave_requests 
             WHERE student_id = %s AND leave_type = 'leave' AND status != 'rejected' 
             AND from_date >= date_trunc('month', CURRENT_DATE)
         """, (user_id,))
-        monthly_leaves = cur.fetchone()['count']
+        res_m = cur.fetchone()
+        monthly_leaves = res_m['total'] if res_m['total'] else 0
 
         # Semester (Rolling 6 months)
         cur.execute("""
-            SELECT COUNT(*) FROM leave_requests 
+            SELECT SUM((to_date - from_date) + 1) as total 
+            FROM leave_requests 
             WHERE student_id = %s AND leave_type = 'leave' AND status != 'rejected' 
             AND from_date >= CURRENT_DATE - INTERVAL '6 months'
         """, (user_id,))
-        semester_leaves = cur.fetchone()['count']
+        res_s = cur.fetchone()
+        semester_leaves = res_s['total'] if res_s['total'] else 0
 
     finally:
         cur.close()
@@ -504,7 +509,6 @@ def student_dashboard():
                            weekly_leaves=weekly_leaves, 
                            monthly_leaves=monthly_leaves, 
                            semester_leaves=semester_leaves)
-
 @app.route('/student/apply', methods=['POST'])
 def apply_leave():
     if 'user_id' not in session or session.get('role') != 'student':
@@ -516,38 +520,56 @@ def apply_leave():
     to_date_str = request.form.get('to_date')
     reason = request.form.get('reason')
     
-    # Handle File Upload
-    proof_file = request.files.get('proof_file')
-    proof_filename = None
-    if proof_file and proof_file.filename != '':
-        filename = secure_filename(proof_file.filename)
-        proof_filename = f"student_{user_id}_{filename}" 
-        proof_file.save(os.path.join(app.config['UPLOAD_FOLDER'], proof_filename))
-
-    # Calculate Emergency (If applying for TODAY or earlier)
+    # 1. Calculate Days for the CURRENT request
     from_date_obj = datetime.strptime(from_date_str, '%Y-%m-%d').date()
-    today = datetime.today().date()
-    
-    is_emergency = False
-    status = 'pending_mentor' # Default routing
-    
-    if from_date_obj <= today:
-        is_emergency = True
-        status = 'pending_cp' # EMERGENCY BYPASS! Skips Mentor.
+    to_date_obj = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+    requested_days = (to_date_obj - from_date_obj).days + 1
 
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
     try:
+        # 2. VALIDATION: Only check quota if type is 'leave'
+        if leave_type == 'leave':
+            cur.execute("""
+                SELECT SUM((to_date - from_date) + 1) as total 
+                FROM leave_requests 
+                WHERE student_id = %s AND leave_type = 'leave' AND status != 'rejected' 
+                AND from_date >= date_trunc('week', CURRENT_DATE)
+            """, (user_id,))
+            res = cur.fetchone()
+            already_taken = res['total'] if res and res['total'] else 0
+
+            # BLOCK if (Taken + New) > 2
+            if (already_taken + requested_days) > 2:
+                flash(f"❌ Application Denied! You requested {requested_days} days, but you only have {2 - already_taken} days left this week.", "error")
+                return redirect(url_for('student_dashboard'))
+
+        # 3. Handle File Upload (If validation passed)
+        proof_file = request.files.get('proof_file')
+        proof_filename = None
+        if proof_file and proof_file.filename != '':
+            filename = secure_filename(proof_file.filename)
+            proof_filename = f"student_{user_id}_{filename}" 
+            proof_file.save(os.path.join(app.config['UPLOAD_FOLDER'], proof_filename))
+
+        # 4. Determine Status (Emergency Logic)
+        today = datetime.today().date()
+        is_emergency = False
+        status = 'pending_mentor'
+        
+        if from_date_obj <= today:
+            is_emergency = True
+            status = 'pending_cp'
+
+        # 5. Final Insert
         cur.execute("""
             INSERT INTO leave_requests (student_id, leave_type, from_date, to_date, reason, status, is_emergency, proof_file_path)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (user_id, leave_type, from_date_str, to_date_str, reason, status, is_emergency, proof_filename))
-        conn.commit()
         
-        if is_emergency:
-            flash('🚨 Emergency Leave submitted! Routed directly to your CP.', 'success')
-        else:
-            flash('Leave application submitted to your Mentor.', 'success')
+        conn.commit()
+        flash('✅ Application submitted successfully!', 'success')
             
     except Exception as e:
         conn.rollback()
@@ -557,6 +579,7 @@ def apply_leave():
         conn.close()
 
     return redirect(url_for('student_dashboard'))
+
 
 @app.route('/staff/student-details/<int:student_id>', methods=['GET'])
 def get_student_details(student_id):
@@ -590,36 +613,32 @@ def get_student_details(student_id):
 def mark_absent():
     if not session.get('is_cp'): return redirect(url_for('staff_dashboard'))
 
-    roll_numbers = request.form.get('absent_roll_numbers') # e.g., "23UCS002, 23UCS008"
-    date = request.form.get('absent_date') # The date they were absent
+    roll_numbers = request.form.get('absent_roll_numbers') 
+    from_date = request.form.get('from_date') 
+    to_date = request.form.get('to_date') 
 
-    roll_list = [r.strip() for r in roll_numbers.split(',')]
+    roll_list = [r.strip() for r in roll_numbers.split(',') if r.strip()]
 
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         for roll in roll_list:
-            # First, find the student ID from the roll number
-            cur.execute("SELECT id FROM students WHERE roll_number = %s", (roll,))
+            cur.execute("SELECT id FROM students WHERE UPPER(roll_number) = UPPER(%s)", (roll,))
             student = cur.fetchone()
 
             if student:
-                # Insert a forced 'leave' record. 
-                # Set status to 'approved_final' so it counts against them immediately.
                 cur.execute("""
                     INSERT INTO leave_requests (student_id, leave_type, from_date, to_date, reason, status)
-                    VALUES (%s, 'leave', %s, %s, 'Uninformed Absence marked by CP', 'approved_final')
-                """, (student[0], date, date))
-
+                    VALUES (%s, 'leave', %s, %s, 'Manual entry by CP (Call/Absence)', 'approved_final')
+                """, (student[0], from_date, to_date))
         conn.commit()
-        flash('Absences recorded successfully.', 'success')
+        flash('Manual leaves recorded successfully.', 'success')
     except Exception as e:
         conn.rollback()
-        flash('Error recording absences.', 'error')
+        flash('Error saving records.', 'error')
     finally:
         cur.close()
         conn.close()
-
     return redirect(url_for('staff_dashboard'))
 
 from flask import jsonify, request

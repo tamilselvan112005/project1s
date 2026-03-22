@@ -141,20 +141,26 @@
 
         {% if session.is_cp %}
         <div id="class" class="tab-content">
-            
             <div class="csv-box" style="border-left: 4px solid #ef4444;">
-                <h3 style="margin-top: 0; color: #b91c1c;">🚨 Mark Uninformed Absence</h3>
-                <p style="font-size: 13px; color: #64748b;">Record leaves for students who did not inform via the app. This deducts from their allowed leaves.</p>
-                <form action="/staff/mark-absent" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start;">
-                    <div style="flex: 1; min-width: 150px;">
-                        <input type="date" name="absent_date" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                    </div>
-                    <div style="flex: 3; min-width: 250px;">
-                        <input type="text" name="absent_roll_numbers" placeholder="Enter Roll Numbers separated by commas (e.g. 23UCS002, 23UCS013)" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                    </div>
-                    <button type="submit" class="action-btn btn-reject" style="padding: 10px 20px;">Record Absence</button>
-                </form>
-            </div>
+            <h3 style="margin-top: 0; color: #b91c1c;">📝 Manual Leave Entry</h3>
+            <p style="font-size: 13px; color: #64748b;">Use this for uninformed absences OR leaves allowed via phone call. This will calculate total days.</p>
+    
+            <form action="/staff/mark-absent" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 1; min-width: 140px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">FROM DATE</label>
+            <input type="date" name="from_date" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="flex: 1; min-width: 140px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">TO DATE</label>
+            <input type="date" name="to_date" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="flex: 2; min-width: 250px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">STUDENT ROLL NUMBERS</label>
+            <input type="text" name="absent_roll_numbers" placeholder="e.g. 23UCS002, 23UCS013" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <button type="submit" class="action-btn btn-reject" style="padding: 11px 20px; height: 40px;">Record Leave</button>
+    </form>
+</div>
 
             <div class="csv-box">
                 <h3 style="margin-top: 0;">Upload Class List via Excel</h3>

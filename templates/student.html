@@ -146,5 +146,72 @@
             </tbody>
         </table>
     </div>
+   
+
+    <script>
+        document.querySelector('form').onsubmit = function(e) {
+            const fromDateVal = document.getElementsByName('from_date')[0].value;
+            const toDateVal = document.getElementsByName('to_date')[0].value;
+            const leaveType = document.getElementsByName('leave_type')[0].value;
+
+            // Don't submit if dates are empty
+            if (!fromDateVal || !toDateVal) {
+                alert("Please select both From and To dates.");
+                return false;
+            }
+
+            const fromDate = new Date(fromDateVal);
+            const toDate = new Date(toDateVal);
+
+            // Validation: To Date cannot be before From Date
+            if (toDate < fromDate) {
+                alert("The 'To Date' cannot be earlier than the 'From Date'.");
+                return false;
+            }
+
+            if (leaveType === 'leave') {
+                // Calculate total days requested
+                const diffTime = Math.abs(toDate - fromDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                // weekly_leaves passed from Flask
+                const alreadyTaken = {{ weekly_leaves }}; 
+                const maxAllowed = 2;
+
+                if ((alreadyTaken + diffDays) > maxAllowed) {
+                    alert(`Action Blocked: You requested ${diffDays} days, but you only have ${maxAllowed - alreadyTaken} days remaining this week.`);
+                    return false; // Blocks the form from submitting
+                }
+            }
+            return true;
+        };
+
+        // Logic to grey out button if weekly quota is full
+        const weeklyLeaves = {{ weekly_leaves }};
+        if (weeklyLeaves >= 2) {
+            const btn = document.querySelector('.btn-submit');
+            const select = document.querySelector('select[name="leave_type"]');
+            
+            // Only lock 'Leave' type, allow 'OD'
+            select.onchange = function() {
+                if (this.value === 'leave') {
+                    btn.style.background = '#94a3b8';
+                    btn.style.cursor = 'not-allowed';
+                    btn.innerText = 'Weekly Limit Reached';
+                } else {
+                    btn.style.background = '#4f46e5';
+                    btn.style.cursor = 'pointer';
+                    btn.innerText = 'Submit Application';
+                }
+            };
+            
+            // Initial check on page load
+            if(select.value === 'leave') {
+                btn.style.background = '#94a3b8';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = 'Weekly Limit Reached';
+            }
+        }
+    </script>
 </body>
 </html>
