@@ -1,7 +1,7 @@
 Flask==3.0.2
 psycopg2-binary==2.9.9
-pandas==2.2.1
-openpyxl==3.1.2
+pandas
+openpyxl
 python-dotenv==1.0.1
 Werkzeug==3.0.1
 gunicorn==21.2.0
