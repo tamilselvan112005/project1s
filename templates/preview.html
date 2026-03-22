@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Preview Excel Data</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 40px; margin: 0; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        
+        /* Checkbox Box Styles */
+        .checkbox-group { background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .checkbox-group label { margin-right: 20px; cursor: pointer; display: inline-flex; align-items: center; }
+        .checkbox-group input[type="checkbox"] { margin-right: 8px; width: 18px; height: 18px; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f1f5f9; color: #475569; }
+        
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px;}
+        .btn-confirm { background: #22c55e; color: white; margin-right: 10px; transition: background 0.3s;}
+        .btn-confirm:hover { background: #16a34a; }
+        .btn-cancel { background: #ef4444; color: white; transition: background 0.3s;}
+        .btn-cancel:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="margin-top: 0; color: #1e293b;">⚠️ Preview Data Before Saving</h2>
+        <p>You are about to process <strong>{{ data|length }}</strong> students.</p>
+
+        <form action="/staff/bulk-confirm" method="POST">
+            
+            <input type="hidden" name="data_json" value="{{ data | tojson | forceescape }}">
+
+            <div class="checkbox-group">
+                <h3 style="margin-top: 0; color: #334155;">Select Data to Import</h3>
+                <p style="font-size: 13px; color: #64748b; margin-top: -5px;">Roll Numbers are mandatory. If a box is disabled, we couldn't find that column in your Excel file.</p>
+                
+                <div style="display: flex; flex-wrap: wrap;">
+                    <label style="font-weight: bold; color: {% if available_cols.name %}#1e293b{% else %}#cbd5e1{% endif %};">
+                        <input type="checkbox" name="import_name" value="1" {% if available_cols.name %}checked{% else %}disabled{% endif %}> 
+                        Student Names
+                    </label>
+                    <label style="font-weight: bold; color: {% if available_cols.mentor %}#1e293b{% else %}#cbd5e1{% endif %};">
+                        <input type="checkbox" name="import_mentor" value="1" {% if available_cols.mentor %}checked{% else %}disabled{% endif %}> 
+                        Mentors
+                    </label>
+                    <label style="font-weight: bold; color: {% if available_cols.s_mob %}#1e293b{% else %}#cbd5e1{% endif %};">
+                        <input type="checkbox" name="import_s_mob" value="1" {% if available_cols.s_mob %}checked{% else %}disabled{% endif %}> 
+                        Student Ph
+                    </label>
+                    <label style="font-weight: bold; color: {% if available_cols.p_mob %}#1e293b{% else %}#cbd5e1{% endif %};">
+                        <input type="checkbox" name="import_p_mob" value="1" {% if available_cols.p_mob %}checked{% else %}disabled{% endif %}> 
+                        Parent Ph
+                    </label>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto; max-height: 400px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table>
+                    <thead style="position: sticky; top: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <tr>
+                            <th>Roll Number</th>
+                            <th>Name</th>
+                            <th>Mentor</th>
+                            <th>Student Ph</th>
+                            <th>Parent Ph</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in data %}
+                        <tr>
+                            <td><strong>{{ student.roll_number }}</strong></td>
+                            <td style="color: {% if not student.name %}#94a3b8{% endif %};">{{ student.name or '-' }}</td>
+                            <td style="color: {% if not student.excel_mentor %}#94a3b8{% endif %};">{{ student.excel_mentor or '-' }}</td>
+                            <td style="color: {% if not student.student_mobile %}#94a3b8{% endif %};">{{ student.student_mobile or '-' }}</td>
+                            <td style="color: {% if not student.parent_mobile %}#94a3b8{% endif %};">{{ student.parent_mobile or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <button type="submit" class="btn btn-confirm">✅ Confirm & Save Selected Data</button>
+                <a href="/staff/dashboard" class="btn btn-cancel">❌ Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

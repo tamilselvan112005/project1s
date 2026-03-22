@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Dashboard - Leave Portal</title>
+    <style>
+        body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; min-height: 100vh; }
+        .header { padding: 20px 40px; background: #2563eb; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .logout-btn { padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border-radius: 8px; text-decoration: none; font-weight: bold; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 20px; }
+        
+        /* Quota Cards */
+        .quota-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .quota-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
+        .quota-card h3 { margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; }
+        .quota-number { font-size: 32px; font-weight: bold; color: #1e293b; }
+        
+        /* The Form */
+        .form-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #334155; }
+        input[type="date"], select, textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .btn-submit { background: #4f46e5; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        
+        /* History Table */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .status-pending { background: #fef08a; color: #854d0e; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        
+        .alert { padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold;}
+        .alert.success { background: #dcfce7; color: #166534; }
+        .alert.error { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1 style="margin: 0; font-size: 24px;">Student Portal</h1>
+            <span style="font-size: 14px; opacity: 0.9;">Welcome, {{ session.name }}</span>
+        </div>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 style="color: #1e293b;">Your Leave Balance</h2>
+        <div class="quota-grid">
+            <div class="quota-card" style="border-bottom: 4px solid {% if weekly_leaves >= 2 %}#ef4444{% else %}#22c55e{% endif %};">
+                <h3>This Week</h3>
+                <div class="quota-number">{{ weekly_leaves }} <span style="font-size: 14px; color: #94a3b8;">/ 2 Max</span></div>
+            </div>
+            <div class="quota-card" style="border-bottom: 4px solid {% if monthly_leaves >= 4 %}#ef4444{% else %}#3b82f6{% endif %};">
+                <h3>This Month</h3>
+                <div class="quota-number">{{ monthly_leaves }} <span style="font-size: 14px; color: #94a3b8;">/ 4 Max</span></div>
+            </div>
+            <div class="quota-card" style="border-bottom: 4px solid {% if semester_leaves >= 8 %}#ef4444{% else %}#8b5cf6{% endif %};">
+                <h3>This Semester</h3>
+                <div class="quota-number">{{ semester_leaves }} <span style="font-size: 14px; color: #94a3b8;">/ 8 Max</span></div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h2 style="margin-top: 0;">Apply for Leave / OD</h2>
+            
+            {% if weekly_leaves >= 2 %}
+                <div class="alert error">You have reached your 2 leaves for this week. Standard leave is disabled.</div>
+            {% endif %}
+
+            <form action="/student/apply" method="POST" enctype="multipart/form-data">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Request Type</label>
+                        <select name="leave_type" required>
+                            <option value="leave" {% if weekly_leaves >= 2 %}disabled{% endif %}>Standard Leave</option>
+                            <option value="od">On Duty (OD)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Proof (Doctor Note / Event PDF)</label>
+                        <input type="file" name="proof_file" accept=".pdf, .jpg, .png, .jpeg">
+                    </div>
+                    <div class="form-group">
+                        <label>From Date</label>
+                        <input type="date" name="from_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>To Date</label>
+                        <input type="date" name="to_date" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Reason</label>
+                    <textarea name="reason" rows="3" placeholder="Briefly explain your reason..." required></textarea>
+                </div>
+                
+                <p style="font-size: 12px; color: #64748b;">* Selecting today's date flags this as an EMERGENCY and routes directly to your CP.</p>
+                <button type="submit" class="btn-submit">Submit Application</button>
+            </form>
+        </div>
+
+        <h2 style="color: #1e293b;">Application History</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Dates</th>
+                    <th>Type</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.from_date }} to {{ req.to_date }}<br>
+                        {% if req.is_emergency %}<span style="color: red; font-size: 10px; font-weight: bold;">🚨 EMERGENCY</span>{% endif %}
+                    </td>
+                    <td><b>{{ req.leave_type | upper }}</b></td>
+                    <td>{{ req.reason }}</td>
+                    <td>
+                        {% if req.status == 'pending_mentor' %} <span class="badge status-pending">Pending: Mentor</span>
+                        {% elif req.status == 'pending_cp' %} <span class="badge status-pending">Pending: CP</span>
+                        {% elif req.status == 'pending_hod' %} <span class="badge status-pending">Pending: HOD</span>
+                        {% elif req.status == 'approved_final' %} <span class="badge status-approved">Approved</span>
+                        {% elif req.status == 'rejected' %} 
+                            <span class="badge status-rejected">Rejected</span><br>
+                            <small style="color: red;">Reason: {{ req.rejection_reason }}</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">No applications found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

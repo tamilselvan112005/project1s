@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Registration</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px; background: #f8fafc;">
+
+    <div style="background: white; max-width: 400px; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: auto;">
+        <h2>Register New Staff</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p style="color: {% if category == 'error' %}red{% else %}green{% endif %}; font-weight: bold;">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="/register" method="POST" style="display: flex; flex-direction: column; gap: 10px;">
+            <label>Full Name (No Initials for auto-match):</label>
+            <input type="text" name="name" placeholder="e.g. Lavanya" required style="padding: 8px;">
+
+            <label>Email Address:</label>
+            <input type="email" name="email" required style="padding: 8px;">
+
+            <label>Password:</label>
+            <input type="password" name="password" required style="padding: 8px;">
+
+            <fieldset style="border: 1px solid #ccc; border-radius: 6px; padding: 10px;">
+                <legend>Assign Roles:</legend>
+                <label><input type="checkbox" name="is_mentor" checked> Mentor</label><br>
+                <label><input type="checkbox" name="is_chairperson" id="cp_box" onchange="toggleClassFields()"> Chairperson (CP)</label><br>
+                <label><input type="checkbox" name="is_cochairperson" id="cocp_box" onchange="toggleClassFields()"> Co-Chairperson (Co-CP)</label><br>
+                <label><input type="checkbox" name="is_hod"> Head of Department (HOD)</label>
+            </fieldset>
+
+            <div id="class_fields" style="display: none; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f1f5f9;">
+                <label>Assigned Year (e.g., 3):</label>
+                <input type="number" name="year_assigned" id="year_input" style="padding: 8px; width: 100%; margin-bottom: 10px;"><br>
+                <label>Assigned Section (e.g., B):</label>
+                <input type="text" name="section" id="section_input" style="padding: 8px; width: 100%;">
+            </div>
+
+            <button type="submit" style="padding: 12px; margin-top: 10px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Register Staff</button>
+            <p style="text-align: center;"><a href="/login">Back to Login</a></p>
+        </form>
+    </div>
+
+    <script>
+        function toggleClassFields() {
+            const isCP = document.getElementById('cp_box').checked;
+            const isCoCP = document.getElementById('cocp_box').checked;
+            const classFields = document.getElementById('class_fields');
+            if (isCP || isCoCP) { classFields.style.display = 'block'; } 
+            else {
+                classFields.style.display = 'none';
+                document.getElementById('year_input').value = '';
+                document.getElementById('section_input').value = '';
+            }
+        }
+    </script>
+</body>
+</html>

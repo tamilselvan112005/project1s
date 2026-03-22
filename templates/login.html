@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Leave App - Login</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #eef2ff 50%, #f8fafc 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-card h2 {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        .toggle-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .toggle-btn.active {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+            outline: none;
+        }
+        .form-group input:focus {
+            border-color: #4f46e5;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .submit-btn:hover {
+            background: #16a34a;
+        }
+        /* Flask Flash Messages */
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .alert.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .alert.success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .register-link a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>System Portal</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="toggle-container">
+            <button type="button" class="toggle-btn active" id="btn-student" onclick="setLoginType('student')">Student</button>
+            <button type="button" class="toggle-btn" id="btn-staff" onclick="setLoginType('staff')">Staff</button>
+        </div>
+
+        <form action="/login" method="POST">
+            <input type="hidden" name="login_type" id="login_type" value="student">
+
+            <div class="form-group">
+                <label id="identifier-label">Roll Number</label>
+                <input type="text" name="identifier" id="identifier" placeholder="e.g. 23UCS026" required>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+
+            <button type="submit" class="submit-btn">Secure Login</button>
+        </form>
+
+        <div id="register-link" class="register-link" style="display: none;">
+            <a href="/register">New Staff? Register here</a>
+        </div>
+    </div>
+
+    <script>
+        function setLoginType(type) {
+            // Update hidden input for Python
+            document.getElementById('login_type').value = type;
+
+            // Update UI buttons
+            document.getElementById('btn-student').classList.remove('active');
+            document.getElementById('btn-staff').classList.remove('active');
+            document.getElementById('btn-' + type).classList.add('active');
+
+            // Get elements
+            const idInput = document.getElementById('identifier');
+            const idLabel = document.getElementById('identifier-label');
+            const registerLink = document.getElementById('register-link');
+
+            // Swap labels, placeholders, and show/hide register link
+            if (type === 'student') {
+                idLabel.innerText = 'Roll Number';
+                idInput.placeholder = 'e.g. 23UCS026';
+                idInput.type = 'text';
+                registerLink.style.display = 'none'; // Hide register link for students
+            } else {
+                idLabel.innerText = 'Email Address';
+                idInput.placeholder = 'staff@college.edu';
+                idInput.type = 'email';
+                registerLink.style.display = 'block'; // Show register link for staff
+            }
+        }
+    </script>
+</body>
+</html>
