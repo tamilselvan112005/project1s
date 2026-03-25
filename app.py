@@ -519,7 +519,7 @@ def staff_action_history():
     return jsonify(hist)
 # ==========================================
 # PARENT APP API (ANDROID)
-# ==========================================
+# ========================================
 
 @app.route('/api/parent/login', methods=['POST'])
 def api_parent_login():
@@ -533,12 +533,52 @@ def api_parent_login():
 @app.route('/api/parent/dashboard', methods=['POST'])
 def api_parent_dashboard():
     data = request.get_json()
-    cur = get_db_connection().cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT leave_type, from_date, to_date, status, reason FROM leave_requests WHERE student_id=%s ORDER BY created_at DESC", (data.get('student_id'),))
-    leaves = cur.fetchall()
-    cur.execute("SELECT title as holiday_name, TO_CHAR(date, 'DD Mon YYYY') as holiday_date FROM college_holidays WHERE date >= CURRENT_DATE")
-    holidays = cur.fetchall()
-    return jsonify({"success": True, "child_leaves": leaves, "college_holidays": holidays})
+    
+    # Always good practice to handle connections with try/finally
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        # Enhanced query matching the staff dashboard format
+        cur.execute("""
+            SELECT 
+                id, 
+                leave_type, 
+                reason, 
+                status, 
+                is_emergency,
+                TO_CHAR(from_date, 'DD Mon YYYY') as from_date,
+                TO_CHAR(to_date, 'DD Mon YYYY') as to_date,
+                (to_date - from_date + 1) as duration,
+                TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'DD Mon, hh:mi AM') as applied_at_ist
+            FROM leave_requests 
+            WHERE student_id=%s 
+            ORDER BY created_at DESC
+        """, (data.get('student_id'),))
+        
+        leaves = cur.fetchall()
+        
+        cur.execute("""
+            SELECT title as holiday_name, 
+                   TO_CHAR(date, 'DD Mon YYYY') as holiday_date 
+            FROM college_holidays 
+            WHERE date >= CURRENT_DATE
+        """)
+        holidays = cur.fetchall()
+        
+        return jsonify({
+            "success": True, 
+            "child_leaves": leaves, 
+            "college_holidays": holidays
+        })
+        
+    except Exception as e:
+        print("Error fetching parent dashboard:", e)
+        return jsonify({"success": False, "message": "Server error"}), 500
+        
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/logout')
 def logout():
