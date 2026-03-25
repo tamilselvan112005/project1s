@@ -240,7 +240,7 @@ def bulk_assign():
                 'roll_number': roll,
                 'name': str(row.get(col_map['name'])).strip() if col_map['name'] else "Unknown",
                 'excel_mentor': str(row.get(col_map['mentor'])).strip() if col_map['mentor'] else None,
-                'parent_mobile': str(row.get(col_map['p_mob'])).strip() if col_map['p_mob'] else None,
+                'father_mobile': str(row.get(col_map['p_mob'])).strip() if col_map['p_mob'] else None,
                 'batch_year': calculated_batch, 'section': session.get('section'), 'department': 'CSE'
             })
         return render_template('preview.html', data=preview_data, available_cols=available_cols)
@@ -258,11 +258,11 @@ def bulk_confirm():
             cur.execute("SELECT id FROM students WHERE UPPER(roll_number) = UPPER(%s)", (s['roll_number'],))
             exists = cur.fetchone()
             if exists:
-                cur.execute("UPDATE students SET name=%s, excel_mentor_name=%s, parent_mobile=%s, batch_year=%s, section=%s, department=%s WHERE id=%s",
-                            (s['name'], s['excel_mentor'], s['parent_mobile'], s['batch_year'], s['section'], s['department'], exists[0]))
+                cur.execute("UPDATE students SET name=%s, excel_mentor_name=%s, father_mobile=%s, batch_year=%s, section=%s, department=%s WHERE id=%s",
+                            (s['name'], s['excel_mentor'], s['father_mobile'], s['batch_year'], s['section'], s['department'], exists[0]))
             else:
-                cur.execute("INSERT INTO students (roll_number, name, excel_mentor_name, parent_mobile, batch_year, section, department) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                            (s['roll_number'], s['name'], s['excel_mentor'], s['parent_mobile'], s['batch_year'], s['section'], s['department']))
+                cur.execute("INSERT INTO students (roll_number, name, excel_mentor_name, father_mobile, batch_year, section, department) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                            (s['roll_number'], s['name'], s['excel_mentor'], s['father_mobile'], s['batch_year'], s['section'], s['department']))
         conn.commit(); flash('Import Successful', 'success')
     finally: cur.close(); conn.close()
     return redirect(url_for('staff_dashboard'))
@@ -330,7 +330,7 @@ def staff_action_history():
 def api_parent_login():
     data = request.get_json()
     cur = get_db_connection().cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT id, name, roll_number FROM students WHERE LOWER(name)=LOWER(%s) AND parent_mobile=%s", (data.get('student_name'), data.get('father_mobile')))
+    cur.execute("SELECT id, name, roll_number FROM students WHERE LOWER(name)=LOWER(%s) AND father_mobile=%s", (data.get('student_name'), data.get('father_mobile')))
     student = cur.fetchone()
     if student: return jsonify({"success": True, "student_id": student['id'], "student_name": student['name'], "roll_number": student['roll_number']})
     return jsonify({"success": False, "message": "Invalid details"}), 401
