@@ -287,20 +287,50 @@ def mark_absent():
 # ==========================================
 # STUDENT ROUTES
 # ==========================================
-
 @app.route('/student/dashboard')
 def student_dashboard():
-    user_id = session.get('user_id')
-    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("""SELECT *, TO_CHAR(from_date, 'DD Mon YYYY') as from_date_clean, 
-                TO_CHAR(to_date, 'DD Mon YYYY') as to_date_clean,
-                (to_date - from_date + 1) as duration FROM leave_requests WHERE student_id = %s ORDER BY created_at DESC""", (user_id,))
-    reqs = cur.fetchall()
-    cur.execute("SELECT SUM(to_date-from_date+1) FROM leave_requests WHERE student_id=%s AND leave_type='leave' AND status!='rejected' AND from_date>=date_trunc('week', CURRENT_DATE)", (user_id,))
-    w = cur.fetchone()['sum'] or 0
-    cur.close(); conn.close()
-    return render_template('student.html', requests=reqs, weekly_leaves=w)
+    if 'user_id' not in session or session.get('role') != 'student':
+        return redirect(url_for('login'))
 
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        # 1. Fetch History
+        cur.execute("""SELECT *, TO_CHAR(from_date, 'DD Mon YYYY') as from_date_clean, 
+                    TO_CHAR(to_date, 'DD Mon YYYY') as to_date_clean,
+                    (to_date - from_date + 1) as duration FROM leave_requests 
+                    WHERE student_id = %s ORDER BY created_at DESC""", (user_id,))
+        reqs = cur.fetchall()
+
+        # 2. Weekly Quota
+        cur.execute("""SELECT SUM(to_date-from_date+1) FROM leave_requests 
+                    WHERE student_id=%s AND leave_type='leave' AND status!='rejected' 
+                    AND from_date>=date_trunc('week', CURRENT_DATE)""", (user_id,))
+        w = cur.fetchone()['sum'] or 0
+
+        # 3. Monthly Quota (🌟 Added this to fix your error)
+        cur.execute("""SELECT SUM(to_date-from_date+1) FROM leave_requests 
+                    WHERE student_id=%s AND leave_type='leave' AND status!='rejected' 
+                    AND from_date>=date_trunc('month', CURRENT_DATE)""", (user_id,))
+        m = cur.fetchone()['sum'] or 0
+
+        # 4. Semester Quota (🌟 Added this to fix your error)
+        cur.execute("""SELECT SUM(to_date-from_date+1) FROM leave_requests 
+                    WHERE student_id=%s AND leave_type='leave' AND status!='rejected' 
+                    AND from_date >= CURRENT_DATE - INTERVAL '6 months'""", (user_id,))
+        s = cur.fetchone()['sum'] or 0
+
+    finally:
+        cur.close(); conn.close()
+
+    # Make sure all three variables are passed here!
+    return render_template('student.html', 
+                           requests=reqs, 
+                           weekly_leaves=w, 
+                           monthly_leaves=m, 
+                           semester_leaves=s)
 
 @app.route('/staff/my-history')
 def staff_action_history():
