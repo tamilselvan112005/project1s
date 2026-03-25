@@ -2,49 +2,222 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Registration</title>
-</head>
-<body style="font-family: sans-serif; padding: 20px; background: #f8fafc;">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --white: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
 
-    <div style="background: white; max-width: 400px; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: auto;">
-        <h2>Register New Staff</h2>
+        body { 
+            margin: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+        }
+
+        .reg-container { 
+            background: var(--white); 
+            width: 100%;
+            max-width: 450px; 
+            padding: 40px; 
+            border-radius: 24px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+            border: 1px solid var(--border);
+        }
+
+        h2 { 
+            margin: 0 0 8px 0; 
+            color: var(--text-main); 
+            font-size: 1.75rem; 
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin: 0 0 24px 0;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecdd3; }
+        .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+        form { display: flex; flex-direction: column; gap: 18px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+        label { 
+            font-size: 0.8rem; 
+            font-weight: 800; 
+            color: var(--text-muted); 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], 
+        input[type="email"], 
+        input[type="password"],
+        input[type="number"] { 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            border: 1.5px solid var(--border); 
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+
+        .role-selector {
+            background: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .role-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .role-option input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        #class_fields {
+            background: #f5f3ff;
+            border: 1.5px solid #ddd6fe;
+            padding: 18px;
+            border-radius: 16px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .submit-btn { 
+            padding: 14px; 
+            margin-top: 10px; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 14px; 
+            font-size: 1rem;
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        }
+
+        .submit-btn:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+
+        .footer-link { 
+            text-align: center; 
+            margin-top: 10px; 
+            font-size: 0.9rem; 
+            color: var(--text-muted); 
+            font-weight: 600;
+        }
+        .footer-link a { color: var(--primary); text-decoration: none; font-weight: 800; }
+        .footer-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="reg-container">
+        <h2>Register Staff</h2>
+        <p class="subtitle">Create an account to manage student leaves.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <p style="color: {% if category == 'error' %}red{% else %}green{% endif %}; font-weight: bold;">{{ message }}</p>
+                    <div class="alert alert-{% if category == 'error' %}error{% else %}success{% endif %}">
+                        {{ message }}
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <form action="/register" method="POST" style="display: flex; flex-direction: column; gap: 10px;">
-            <label>Full Name (No Initials for auto-match):</label>
-            <input type="text" name="name" placeholder="e.g. Lavanya" required style="padding: 8px;">
-
-            <label>Email Address:</label>
-            <input type="email" name="email" required style="padding: 8px;">
-
-            <label>Password:</label>
-            <input type="password" name="password" required style="padding: 8px;">
-
-            <fieldset style="border: 1px solid #ccc; border-radius: 6px; padding: 10px;">
-                <legend>Assign Roles:</legend>
-                <label><input type="checkbox" name="is_mentor" checked> Mentor</label><br>
-                <label><input type="checkbox" name="is_chairperson" id="cp_box" onchange="toggleClassFields()"> Chairperson (CP)</label><br>
-                <label><input type="checkbox" name="is_cochairperson" id="cocp_box" onchange="toggleClassFields()"> Co-Chairperson (Co-CP)</label><br>
-                <label><input type="checkbox" name="is_hod"> Head of Department (HOD)</label>
-            </fieldset>
-            
-            <div id="class_fields" style="display: none; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f1f5f9;">
-            <label>Batch Year (e.g., 2023):</label>
-            <input type="number" name="batch_year" id="year_input" placeholder="2023" style="padding: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box;"><br>
-    
-            <label>Assigned Section (e.g., B):</label>
-            <input type="text" name="section" id="section_input" placeholder="B" style="padding: 8px; width: 100%; box-sizing: border-box;">
+        <form action="/register" method="POST">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" placeholder="e.g. Tamil Selvan" required>
             </div>
 
-            <button type="submit" style="padding: 12px; margin-top: 10px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Register Staff</button>
-            <p style="text-align: center;"><a href="/login">Back to Login</a></p>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="staff@college.edu" required>
+            </div>
+
+            <div class="form-group">
+                <label>Access Password</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <div class="form-group">
+                <label>System Roles</label>
+                <div class="role-selector">
+                    <label class="role-option"><input type="checkbox" name="is_mentor" checked> Mentor</label>
+                    <label class="role-option"><input type="checkbox" name="is_chairperson" id="cp_box" onchange="toggleClassFields()"> Chairperson</label>
+                    <label class="role-option"><input type="checkbox" name="is_cochairperson" id="cocp_box" onchange="toggleClassFields()"> Co-CP</label>
+                    <label class="role-option"><input type="checkbox" name="is_hod"> HOD</label>
+                </div>
+            </div>
+            
+            <div id="class_fields">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Batch Year</label>
+                        <input type="number" name="batch_year" id="year_input" placeholder="2023">
+                    </div>
+                    <div class="form-group">
+                        <label>Section</label>
+                        <input type="text" name="section" id="section_input" placeholder="B">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Create Staff Account</button>
+            
+            <div class="footer-link">
+                Already have an account? <a href="/login">Log In</a>
+            </div>
         </form>
     </div>
 
@@ -53,8 +226,9 @@
             const isCP = document.getElementById('cp_box').checked;
             const isCoCP = document.getElementById('cocp_box').checked;
             const classFields = document.getElementById('class_fields');
-            if (isCP || isCoCP) { classFields.style.display = 'block'; } 
-            else {
+            if (isCP || isCoCP) { 
+                classFields.style.display = 'block'; 
+            } else {
                 classFields.style.display = 'none';
                 document.getElementById('year_input').value = '';
                 document.getElementById('section_input').value = '';

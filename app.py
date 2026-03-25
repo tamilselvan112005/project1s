@@ -1,7 +1,9 @@
 import os
 import math
 import pandas as pd
+import re
 
+from thefuzz import fuzz, process
 import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -106,7 +108,6 @@ def register():
 # ==========================================
 # STAFF ROUTES
 # ==========================================
-
 @app.route('/staff/dashboard')
 def staff_dashboard():
     if 'user_id' not in session or session.get('role') != 'staff': return redirect(url_for('login'))
@@ -116,59 +117,49 @@ def staff_dashboard():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
+        # 1. Fetch Mentees with detailed info
         cur.execute("SELECT * FROM students WHERE mentor_id = %s OR co_mentor_id = %s ORDER BY roll_number", (user_id, user_id))
         mentee_list = cur.fetchall()
 
+        # 2. Main Query with Time (IST) and Date Ranges
         query_base = """
-            SELECT lr.id, lr.student_id, lr.leave_type, lr.reason, lr.status, lr.is_emergency,
-            TO_CHAR(lr.from_date, 'YYYY-MM-DD') as from_date_raw,
-            TO_CHAR(lr.from_date, 'DD Mon YYYY') as from_date,
-            TO_CHAR(lr.to_date, 'DD Mon YYYY') as to_date,
-            (lr.to_date - lr.from_date + 1) as duration,
-            s.name AS student_name, s.roll_number, s.batch_year, s.section 
+        SELECT lr.id, lr.student_id, lr.leave_type, lr.reason, lr.status, lr.is_emergency, lr.proof_file,
+        TO_CHAR(lr.from_date, 'DD Mon YYYY') as from_date,
+        TO_CHAR(lr.to_date, 'DD Mon YYYY') as to_date,
+        TO_CHAR(lr.from_date, 'YYYY-MM-DD') as from_date_raw,
+        (lr.to_date - lr.from_date + 1) as duration,
+        TO_CHAR(lr.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'DD Mon, hh:mi AM') as applied_at_ist,
+        s.name AS student_name, s.roll_number, s.batch_year, s.section,
+        -- Stats based on specific student and section
+        COALESCE((SELECT SUM(to_date-from_date+1) FROM leave_requests WHERE student_id=s.id AND leave_type='leave' AND status='approved_final' AND from_date>=date_trunc('month', CURRENT_DATE)),0) as month_leaves,
+        COALESCE((SELECT SUM(to_date-from_date+1) FROM leave_requests WHERE student_id=s.id AND leave_type='od' AND status='approved_final' AND from_date>=date_trunc('month', CURRENT_DATE)),0) as month_ods
         """
 
         if session.get('is_hod'):
-            cur.execute(query_base + """, 
-                COALESCE((SELECT SUM(to_date-from_date+1) FROM leave_requests WHERE student_id=s.id AND leave_type='leave' AND status='approved_final' AND from_date>=date_trunc('month', CURRENT_DATE)),0) as month_leaves,
-                COALESCE((SELECT SUM(to_date-from_date+1) FROM leave_requests WHERE student_id=s.id AND leave_type='od' AND status='approved_final' AND from_date>=date_trunc('month', CURRENT_DATE)),0) as month_ods
-                FROM leave_requests lr JOIN students s ON lr.student_id = s.id
-                WHERE lr.status = 'pending_hod' ORDER BY lr.created_at ASC""")
+            cur.execute(query_base + " FROM leave_requests lr JOIN students s ON lr.student_id = s.id WHERE lr.status = 'pending_hod' ORDER BY lr.created_at ASC")
         elif session.get('is_cp'):
             cur.execute(query_base + """ FROM leave_requests lr JOIN students s ON lr.student_id = s.id
-                WHERE (s.batch_year = %s AND UPPER(TRIM(s.section)) = UPPER(TRIM(%s)) AND lr.status = 'pending_cp')
+                WHERE (s.batch_year = %s AND TRIM(UPPER(s.section)) = TRIM(UPPER(%s)) AND lr.status = 'pending_cp')
                    OR ((s.mentor_id = %s OR s.co_mentor_id = %s) AND lr.status = 'pending_mentor')
                 ORDER BY lr.created_at ASC""", (year, section, user_id, user_id))
         else:
-            cur.execute(query_base + """ FROM leave_requests lr JOIN students s ON lr.student_id = s.id
-                WHERE (s.mentor_id = %s OR s.co_mentor_id = %s) AND lr.status = 'pending_mentor'
-                ORDER BY lr.created_at ASC""", (user_id, user_id))
+            cur.execute(query_base + " FROM leave_requests lr JOIN students s ON lr.student_id = s.id WHERE (s.mentor_id = %s OR s.co_mentor_id = %s) AND lr.status = 'pending_mentor' ORDER BY lr.created_at ASC", (user_id, user_id))
         
         pending_requests = cur.fetchall()
         
-        # Extra lists for CP
         class_list, all_mentors = [], []
         if session.get('is_cp'):
-            # 🌟 FIX: Added TRIM() to both student section and session section
             cur.execute("""
-                SELECT s.*, st.name as system_mentor_name, st2.name as system_co_mentor_name 
-                FROM students s 
-                LEFT JOIN staff st ON s.mentor_id=st.id 
-                LEFT JOIN staff st2 ON s.co_mentor_id=st2.id 
-                WHERE s.batch_year=%s 
-                  AND TRIM(UPPER(s.section)) = TRIM(UPPER(%s)) 
-                ORDER BY s.roll_number
+                SELECT s.id, s.roll_number, s.name, s.mentor_id, s.co_mentor_id, m1.name as mentor_name, m2.name as co_mentor_name
+                FROM students s LEFT JOIN staff m1 ON s.mentor_id = m1.id LEFT JOIN staff m2 ON s.co_mentor_id = m2.id
+                WHERE s.batch_year = %s AND TRIM(UPPER(s.section)) = TRIM(UPPER(%s)) ORDER BY s.roll_number
             """, (year, section))
             class_list = cur.fetchall()
-            
-            cur.execute("SELECT id, name FROM staff WHERE is_mentor=TRUE ORDER BY name")
+            cur.execute("SELECT id, name FROM staff WHERE is_mentor = TRUE ORDER BY name")
             all_mentors = cur.fetchall()
 
-    finally: 
-        cur.close(); conn.close()
+    finally: cur.close(); conn.close()
     return render_template('staff.html', pending_requests=pending_requests, mentee_list=mentee_list, class_list=class_list, all_mentors=all_mentors)
-
-
 
 @app.route('/staff/student-details/<int:student_id>', methods=['GET'])
 def get_student_details(student_id):
@@ -182,7 +173,8 @@ def get_student_details(student_id):
             TO_CHAR(from_date, 'DD Mon YYYY') as from_date_clean, 
             TO_CHAR(to_date, 'DD Mon YYYY') as to_date_clean, 
             (to_date - from_date + 1) as duration,
-            reason, status FROM leave_requests 
+            reason, status ,proof_file
+            FROM leave_requests 
             WHERE student_id = %s ORDER BY created_at DESC
         """, (student_id,))
         history = cur.fetchall()
@@ -215,56 +207,135 @@ def leave_action():
     finally: cur.close(); conn.close()
     return redirect(url_for('staff_dashboard'))
 
+
+        
+    
+# --- HELPER: FUZZY MATCH LOGIC ---
+def get_best_mentor_match(excel_name, staff_list):
+    if not excel_name or str(excel_name).lower() == 'nan':
+        return None, "No Match", "-"
+
+    # 1. Clean the Excel name (remove titles like DR, MRS)
+    clean_excel = re.sub(r'\b(DR|MR|MRS|MS|PROF)\b\.?', '', str(excel_name), flags=re.IGNORECASE).strip()
+    
+    # 2. Get list of names from DB
+    staff_names = [s['name'] for s in staff_list]
+    
+    # 3. Fuzzy match (Score cutoff 75/100 to be safe)
+    # token_sort_ratio ignores the order of names (e.g., "Anandh A" == "A Anandh")
+    match = process.extractOne(clean_excel, staff_names, scorer=fuzz.token_sort_ratio, score_cutoff=75)
+    
+    if match:
+        matched_name = match[0]
+        staff_id = next(s['id'] for s in staff_list if s['name'] == matched_name)
+        return staff_id, "Matched", matched_name
+    
+    return None, "No Match", "-"
+
+# --- ROUTE 1: PREVIEW ---
 @app.route('/staff/bulk-assign', methods=['POST'])
 def bulk_assign():
     if not session.get('is_cp'): return redirect(url_for('staff_dashboard'))
     file = request.files.get('excel_file')
     if not file: return redirect(url_for('staff_dashboard'))
+    
     try:
-        df = pd.read_excel(file)
+        # Fetch current system mentors for the AI to compare against
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT id, name FROM staff WHERE is_mentor = TRUE")
+        system_staff = cur.fetchall()
+        cur.close(); conn.close()
+
+        df = pd.read_excel(file, dtype=str)
         df.columns = df.columns.str.lower().str.strip()
+        
         col_map = {
-            'roll': next((col for col in df.columns if 'roll' in col or 'reg' in col), None),
-            'name': next((col for col in df.columns if 'name' in col), None),
-            'mentor': next((col for col in df.columns if 'mentor' in col or 'advisor' in col), None),
-            'p_mob': next((col for col in df.columns if 'parent' in col or 'father' in col), None)
+            'roll': next((col for col in df.columns if 'roll' in col), None),
+            'name': next((col for col in df.columns if 'name' in col and 'mentor' not in col), None),
+            'mentor': next((col for col in df.columns if 'mentor' in col), None),
+            'p_mob': next((col for col in df.columns if 'parent' in col or 'ph' in col or 'mobile' in col), None)
         }
-        available_cols = {'name': bool(col_map['name']), 'mentor': bool(col_map['mentor']), 'p_mob': bool(col_map['p_mob'])}
+
         preview_data = []
         for _, row in df.iterrows():
             roll = str(row.get(col_map['roll'])).strip().upper()
-            if not roll or roll == 'NAN': continue
-            try: calculated_batch = 2000 + int(roll[:2])
-            except: calculated_batch = session.get('year')
+            if not roll or roll == 'nan': continue
+
+            # Phone Cleaning (.0 and nan)
+            raw_phone = str(row.get(col_map['p_mob'])).strip().replace('.0', '')
+            clean_phone = "" if raw_phone.lower() == 'nan' else raw_phone
+
+            # AI Fuzzy Matching
+            excel_mentor = str(row.get(col_map['mentor'])).strip()
+            m_id, status, sys_name = get_best_mentor_match(excel_mentor, system_staff)
+
             preview_data.append({
                 'roll_number': roll,
-                'name': str(row.get(col_map['name'])).strip() if col_map['name'] else "Unknown",
-                'excel_mentor': str(row.get(col_map['mentor'])).strip() if col_map['mentor'] else None,
-                'father_mobile': str(row.get(col_map['p_mob'])).strip() if col_map['p_mob'] else None,
-                'batch_year': calculated_batch, 'section': session.get('section'), 'department': 'CSE'
+                'name': str(row.get(col_map['name'])).strip(),
+                'excel_mentor': excel_mentor,
+                'match_status': status,
+                'system_name': sys_name,
+                'matched_id': m_id, # ID found by AI
+                'father_mobile': clean_phone,
+                'batch_year': session.get('year'),
+                'section': session.get('section')
             })
-        return render_template('preview.html', data=preview_data, available_cols=available_cols)
+            
+        return render_template('preview.html', data=preview_data)
+        
     except Exception as e:
-        flash(f'Error: {str(e)}', 'error')
+        flash(f'Excel Error: {str(e)}', 'error')
         return redirect(url_for('staff_dashboard'))
 
+# --- ROUTE 2: CONFIRM (PROTECTS MANUAL "NONE" CHANGES) ---
 @app.route('/staff/bulk-confirm', methods=['POST'])
 def bulk_confirm():
-    if not session.get('is_cp'): return redirect(url_for('staff_dashboard'))
+    if not session.get('is_cp'): return redirect(url_for('login'))
+    
     students = json.loads(request.form.get('data_json'))
-    conn = get_db_connection(); cur = conn.cursor()
+    upd_name = request.form.get('import_name')
+    upd_mentor = request.form.get('import_mentor')
+    upd_p_mob = request.form.get('import_p_mob')
+        
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
     try:
         for s in students:
-            cur.execute("SELECT id FROM students WHERE UPPER(roll_number) = UPPER(%s)", (s['roll_number'],))
+            cur.execute("SELECT name, mentor_id, father_mobile FROM students WHERE roll_number = %s", (s['roll_number'],))
             exists = cur.fetchone()
+            
             if exists:
-                cur.execute("UPDATE students SET name=%s, excel_mentor_name=%s, father_mobile=%s, batch_year=%s, section=%s, department=%s WHERE id=%s",
-                            (s['name'], s['excel_mentor'], s['father_mobile'], s['batch_year'], s['section'], s['department'], exists[0]))
+                # 1. Update Name?
+                final_name = s['name'] if upd_name else exists['name']
+                # 2. Update Phone?
+                final_phone = s['father_mobile'] if upd_p_mob else exists['father_mobile']
+                
+                # 3. Update Mentor? (ONLY if checkbox is checked AND AI found a match)
+                # This protects your manual "None" changes!
+                final_mentor_id = s['matched_id'] if (upd_mentor and s['matched_id']) else exists['mentor_id']
+
+                cur.execute("""
+                    UPDATE students 
+                    SET name=%s, excel_mentor_name=%s, father_mobile=%s, mentor_id=%s
+                    WHERE roll_number = %s
+                """, (final_name, s['excel_mentor'], final_phone, final_mentor_id, s['roll_number']))
             else:
-                cur.execute("INSERT INTO students (roll_number, name, excel_mentor_name, father_mobile, batch_year, section, department) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                            (s['roll_number'], s['name'], s['excel_mentor'], s['father_mobile'], s['batch_year'], s['section'], s['department']))
-        conn.commit(); flash('Import Successful', 'success')
-    finally: cur.close(); conn.close()
+                # New Student Insert
+                cur.execute("""
+                    INSERT INTO students (roll_number, name, excel_mentor_name, father_mobile, mentor_id, batch_year, section) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (s['roll_number'], s['name'], s['excel_mentor'], s['father_mobile'], s['matched_id'], s['batch_year'], s['section']))
+        
+        conn.commit()
+        flash(f'Successfully synced {len(students)} students!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Database Error: {str(e)}', 'error')
+    finally:
+        cur.close(); conn.close()
+        
     return redirect(url_for('staff_dashboard'))
 
 @app.route('/staff/mark-absent', methods=['POST'])
@@ -297,11 +368,17 @@ def student_dashboard():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. Fetch History
-        cur.execute("""SELECT *, TO_CHAR(from_date, 'DD Mon YYYY') as from_date_clean, 
-                    TO_CHAR(to_date, 'DD Mon YYYY') as to_date_clean,
-                    (to_date - from_date + 1) as duration FROM leave_requests 
-                    WHERE student_id = %s ORDER BY created_at DESC""", (user_id,))
+        # 🌟 FIXED QUERY: Added spaces and explicit FROM clause
+        cur.execute("""
+            SELECT *, 
+            TO_CHAR(from_date, 'DD Mon YYYY') as from_date_clean, 
+            TO_CHAR(to_date, 'DD Mon YYYY') as to_date_clean,
+            (to_date - from_date + 1) as duration,
+            proof_file 
+            FROM leave_requests 
+            WHERE student_id = %s 
+            ORDER BY created_at DESC
+        """, (user_id,))
         reqs = cur.fetchall()
 
         # 2. Weekly Quota
@@ -331,26 +408,114 @@ def student_dashboard():
                            weekly_leaves=w, 
                            monthly_leaves=m, 
                            semester_leaves=s)
+@app.route('/student/delete-request/<int:req_id>', methods=['POST'])
+def delete_request(req_id):
+    if 'user_id' not in session or session.get('role') != 'student':
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Check if the request exists, belongs to the student, and is NOT approved/rejected yet
+        cur.execute("""
+            SELECT proof_file FROM leave_requests 
+            WHERE id = %s AND student_id = %s AND status LIKE 'pending_%%'
+        """, (req_id, user_id))
+        row = cur.fetchone()
+
+        if row:
+            # Optional: Delete the physical file from the uploads folder
+            proof_filename = row[0]
+            if proof_filename:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], proof_filename)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+            cur.execute("DELETE FROM leave_requests WHERE id = %s", (req_id,))
+            conn.commit()
+            flash('Request cancelled and deleted successfully.', 'success')
+        else:
+            flash('Unable to delete request. It may have already been processed.', 'error')
+            
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    finally:
+        cur.close(); conn.close()
+
+    return redirect(url_for('student_dashboard'))
+# ==========================================
+# STUDENT APPLY (Fixed order)
+# ==========================================
+@app.route('/student/apply', methods=['POST'])
+def student_apply():
+    if 'user_id' not in session or session.get('role') != 'student':
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    l_type = request.form.get('leave_type')
+    f_date = request.form.get('from_date')
+    t_date = request.form.get('to_date')
+    reason = request.form.get('reason')
+    is_emergency = request.form.get('is_emergency') == 'on'
+
+    filename = None
+    if 'proof' in request.files:
+        file = request.files['proof']
+        if file and file.filename != '':
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            filename = secure_filename(f"student_{user_id}_{timestamp}.{ext}")
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # 🌟 FIXED: match placeholders (%s) to column order
+        cur.execute("""
+            INSERT INTO leave_requests 
+            (student_id, leave_type, from_date, to_date, reason, status, is_emergency, proof_file)
+            VALUES (%s, %s, %s, %s, %s, 'pending_mentor', %s, %s)
+        """, (user_id, l_type, f_date, t_date, reason, is_emergency, filename))
+        
+        conn.commit()
+        flash('Leave applied successfully!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    finally:
+        cur.close(); conn.close()
+
+    return redirect(url_for('student_dashboard'))
+
+@app.route('/staff/update-mentors', methods=['POST'])
+def update_mentors():
+    if not session.get('is_cp'): return redirect(url_for('login'))
+    sid = request.form.get('student_id')
+    m1 = request.form.get('mentor_id') or None
+    m2 = request.form.get('co_mentor_id') or None
+    
+    conn = get_db_connection(); cur = conn.cursor()
+    cur.execute("UPDATE students SET mentor_id = %s, co_mentor_id = %s WHERE id = %s", (m1, m2, sid))
+    conn.commit(); cur.close(); conn.close()
+    flash('Mentors updated!', 'success')
+    return redirect(url_for('staff_dashboard'))
 
 @app.route('/staff/my-history')
 def staff_action_history():
     user_id = session.get('user_id')
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = get_db_connection().cursor(cursor_factory=RealDictCursor)
     cur.execute("""
-        SELECT s.name as student_name, s.roll_number, s.batch_year, s.section,
-        TO_CHAR(lr.from_date, 'YYYY-MM-DD') as from_date_raw,
-        TO_CHAR(lr.from_date, 'DD Mon YYYY') as from_date_clean,
-        TO_CHAR(lr.to_date, 'DD Mon YYYY') as to_date_clean,
-        (lr.to_date - lr.from_date + 1) as duration,
-        lr.status as final_status,
-        -- 🌟 CHANGED: updated_at -> created_at
-        TO_CHAR(lr.created_at, 'DD Mon, HH:MI AM') as processed_at 
+        SELECT s.name as student_name, s.roll_number, s.batch_year, s.section, lr.proof_file,
+        TO_CHAR(lr.from_date, 'DD Mon YYYY') as from_date_clean, (lr.to_date - lr.from_date + 1) as duration,
+        lr.status as final_status, TO_CHAR(lr.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'DD Mon, hh:mi AM') as processed_at 
         FROM leave_requests lr JOIN students s ON lr.student_id = s.id
         WHERE lr.mentor_approved_by = %s OR lr.cp_approved_by = %s OR lr.hod_approved_by = %s
         ORDER BY lr.created_at DESC LIMIT 100 
     """, (user_id, user_id, user_id))
-    hist = cur.fetchall(); cur.close(); conn.close()
+    hist = cur.fetchall(); cur.close()
     return jsonify(hist)
 # ==========================================
 # PARENT APP API (ANDROID)
