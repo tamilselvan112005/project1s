@@ -34,12 +34,13 @@
                 <label><input type="checkbox" name="is_cochairperson" id="cocp_box" onchange="toggleClassFields()"> Co-Chairperson (Co-CP)</label><br>
                 <label><input type="checkbox" name="is_hod"> Head of Department (HOD)</label>
             </fieldset>
-
+            
             <div id="class_fields" style="display: none; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f1f5f9;">
-                <label>Assigned Year (e.g., 3):</label>
-                <input type="number" name="year_assigned" id="year_input" style="padding: 8px; width: 100%; margin-bottom: 10px;"><br>
-                <label>Assigned Section (e.g., B):</label>
-                <input type="text" name="section" id="section_input" style="padding: 8px; width: 100%;">
+            <label>Batch Year (e.g., 2023):</label>
+            <input type="number" name="batch_year" id="year_input" placeholder="2023" style="padding: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box;"><br>
+    
+            <label>Assigned Section (e.g., B):</label>
+            <input type="text" name="section" id="section_input" placeholder="B" style="padding: 8px; width: 100%; box-sizing: border-box;">
             </div>
 
             <button type="submit" style="padding: 12px; margin-top: 10px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Register Staff</button>

@@ -7,357 +7,255 @@
         body { margin: 0; font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f3f4f6 0%, #eef2ff 50%, #f8fafc 100%); min-height: 100vh; }
         .header { padding: 20px 40px; background: linear-gradient(90deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%); display: flex; justify-content: space-between; align-items: center; color: white; }
         .logout-btn { padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; text-decoration: none; font-weight: bold; }
-        .container { max-width: 1200px; margin: 30px auto; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .container { max-width: 1250px; margin: 30px auto; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        
+        .filter-bar { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border: 1px solid #e2e8f0; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; min-width: 120px; }
+
         .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
         .tab { padding: 12px 24px; cursor: pointer; color: #64748b; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab.active { color: #4f46e5; border-bottom: 3px solid #4f46e5; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; }
-        .badge { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        th { background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; }
+        
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         .badge.leave { background: #eef2ff; color: #4338ca; }
         .badge.od { background: #f0fdf4; color: #166534; }
-        .badge.emergency { background: #fee2e2; color: #991b1b; }
-        .action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; margin-right: 5px; text-decoration: none; display: inline-block;}
+        .badge.approved { background: #dcfce7; color: #166534; }
+        .badge.rejected { background: #fee2e2; color: #991b1b; }
+        .duration-tag { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #e2e8f0; }
+
+        .action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; margin-right: 5px; text-decoration: none; }
         .btn-approve { background: #22c55e; }
         .btn-reject { background: #ef4444; }
-        .btn-view { background: #3b82f6; font-size: 11px; padding: 4px 8px; }
-        .btn-edit { background: #f59e0b; font-size: 11px; padding: 4px 8px; }
-        .alert { padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold;}
-        .alert.success { background: #dcfce7; color: #166534; }
-        .alert.error { background: #fee2e2; color: #991b1b; }
         .csv-box { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
-        .clickable-name { color: #2563eb; text-decoration: none; cursor: pointer; font-weight: bold; transition: color 0.2s; }
-        .clickable-name:hover { color: #1d4ed8; text-decoration: underline; }
-        
-        /* Modal Styles */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: white; margin: 5% auto; padding: 25px; border-radius: 12px; width: 500px; max-width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .modal-content.large { width: 700px; }
-        .close-btn { color: #94a3b8; float: right; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1; }
-        .close-btn:hover { color: #0f172a; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #475569; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background-color: white; }
+        .clickable-name { color: #2563eb; text-decoration: none; cursor: pointer; font-weight: bold; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { background-color: white; margin: 2% auto; padding: 25px; border-radius: 12px; width: 900px; max-width: 95%; }
+        .close-btn { color: #94a3b8; float: right; font-size: 24px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="header">
         <div>
             <h1 style="margin: 0; font-size: 24px;">Staff Portal</h1>
-            <span style="font-size: 14px; opacity: 0.9;">
-                Welcome, {{ session.name }} 
-                {% if session.is_cp %} | Batch Year: '{{ session.batch_year }}' - Section: '{{ session.section }}' {% endif %}
-            </span>
+            <span style="font-size: 14px; opacity: 0.9;">Welcome, {{ session.name }} | {{ session.year or 'All' }} - {{ session.section or 'All' }}</span>
         </div>
         <a href="/logout" class="logout-btn">Logout</a>
     </div>
 
     <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
         <div class="tabs">
             <div class="tab active" onclick="showTab('pending', this)">Pending Approvals</div>
+            <div class="tab" onclick="showTab('history', this)">My Action History</div>
             <div class="tab" onclick="showTab('mentees', this)">My Mentees</div>
-            {% if session.is_cp %}
-            <div class="tab" onclick="showTab('class', this)">Class & Mentors (CP)</div>
-            {% endif %}
+            {% if session.is_cp %}<div class="tab" onclick="showTab('class', this)">Class Management</div>{% endif %}
         </div>
 
         <div id="pending" class="tab-content active">
-            <h2>Requests Awaiting Your Action</h2>
-            {% if pending_requests|length == 0 %}
-                <p style="text-align: center; color: #94a3b8; padding: 40px;">No pending requests at the moment. 🎉</p>
-            {% else %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student</th><th>Type</th><th>Dates</th><th>Reason & Proof</th>
-                            {% if session.is_hod %}<th>History (This Month)</th>{% endif %}
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for req in pending_requests %}
-                        <tr>
-                            <td>
-                                <a class="clickable-name" onclick="openStudentModal('{{ req.student_id }}')">{{ req.student_name }}</a><br>
-                                <small>{{ req.roll_number }}</small>
-                                {% if req.is_emergency %}<br><span class="badge emergency">🚨 Emergency</span>{% endif %}
-                            </td>
-                            <td><span class="badge {{ req.leave_type }}">{{ req.leave_type }}</span></td>
-                            <td>{{ req.from_date }} to<br>{{ req.to_date }}</td>
-                            <td style="max-width: 250px;">
-                                {{ req.reason }}
-                                {% if req.proof_file_path %}
-                                    <br><br>
-                                    <a href="{{ url_for('static', filename='uploads/' + req.proof_file_path) }}" target="_blank" class="action-btn btn-view">📄 View Document</a>
-                                {% endif %}
-                            </td>
-                            {% if session.is_hod %}
-                            <td><span style="color: red; font-weight: bold;">{{ req.month_leaves }} Leaves</span> | <span style="color: green; font-weight: bold;">{{ req.month_ods }} ODs</span></td>
-                            {% endif %}
-                            <td>
-                                <form action="/staff/action" method="POST" style="display:inline;">
-                                    <input type="hidden" name="request_id" value="{{ req.id }}">
-                                    <button type="submit" name="action" value="approved" class="action-btn btn-approve">Approve</button>
-                                    <button type="button" class="action-btn btn-reject" onclick="rejectRequest({{ req.id }})">Reject</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% endif %}
-        </div>
-
-        <div id="mentees" class="tab-content">
-            <h2>My Assigned Mentees ({{ mentee_list|length }} Students)</h2>
-            {% if mentee_list|length == 0 %}
-                <p style="text-align: center; color: #94a3b8; padding: 40px;">You have no mentees assigned to you yet.</p>
-            {% else %}
-                <table>
-                    <thead><tr><th>Roll Number</th><th>Name</th><th>Year - Section</th></tr></thead>
-                    <tbody>
-                        {% for student in mentee_list %}
-                        <tr>
-                            <td><strong>{{ student.roll_number }}</strong></td>
-                            <td><a class="clickable-name" onclick="openStudentModal('{{ student.id }}')">{{ student.name }}</a></td>
-                            <td>Batch {{ student.batch_year }} - Sec {{ student.section }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% endif %}
-        </div>
-
-        {% if session.is_cp %}
-        <div id="class" class="tab-content">
-            <div class="csv-box" style="border-left: 4px solid #ef4444;">
-            <h3 style="margin-top: 0; color: #b91c1c;">📝 Manual Leave Entry</h3>
-            <p style="font-size: 13px; color: #64748b;">Use this for uninformed absences OR leaves allowed via phone call. This will calculate total days.</p>
-    
-            <form action="/staff/mark-absent" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-            <div style="flex: 1; min-width: 140px;">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">FROM DATE</label>
-            <input type="date" name="from_date" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="flex: 1; min-width: 140px;">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">TO DATE</label>
-            <input type="date" name="to_date" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="flex: 2; min-width: 250px;">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">STUDENT ROLL NUMBERS</label>
-            <input type="text" name="absent_roll_numbers" placeholder="e.g. 23UCS002, 23UCS013" required style="padding: 10px; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <button type="submit" class="action-btn btn-reject" style="padding: 11px 20px; height: 40px;">Record Leave</button>
-    </form>
-</div>
-
-            <div class="csv-box">
-                <h3 style="margin-top: 0;">Upload Class List via Excel</h3>
-                <form action="/staff/bulk-assign" method="POST" enctype="multipart/form-data" style="display: flex; align-items: center; gap: 10px;">
-                    <input type="file" name="excel_file" accept=".xlsx, .xls" required style="padding: 8px; border: 1px solid #cbd5e1; background: white; border-radius: 6px;">
-                    <button type="submit" class="action-btn btn-approve">Preview & Upload</button>
-                </form>
-                <p style="font-size: 12px; color: #64748b; margin-top: 10px;">Supported columns: Roll, Name, Mentor, Student Mobile, Parent Mobile.</p>
+            <div class="filter-bar">
+                <div class="filter-group" style="flex-grow: 1;">
+                    <label>Search Student</label>
+                    <input type="text" id="pendingSearch" onkeyup="filterTable('pendingTable', 'pendingSearch')" placeholder="Search Roll No or Name...">
+                </div>
+                <div class="filter-group">
+                    <label>Date</label>
+                    <input type="date" id="pendingDate" onchange="filterTableByDate('pendingTable', 'pendingDate')">
+                </div>
+                <button onclick="resetFilters('pendingTable', ['pendingSearch', 'pendingDate'])" style="margin-top: 15px; padding: 8px; border-radius: 6px; cursor: pointer; border: 1px solid #ddd;">Reset</button>
             </div>
-
-            <h2>Current Class Roster ({{ class_list|length }} Students)</h2>
-            <table>
-                <thead>
-                    <tr><th>Roll Number</th><th>Name</th><th>Mentors</th><th>Action</th></tr>
-                </thead>
+            <table id="pendingTable">
+                <thead><tr><th>Student</th><th>Type</th><th>Duration</th><th>Stats</th><th>Dates</th><th>Action</th></tr></thead>
                 <tbody>
-                    {% for student in class_list %}
-                    <tr>
-                        <td><strong>{{ student.roll_number }}</strong></td>
-                        <td><a class="clickable-name" onclick="openStudentModal('{{ student.id }}')">{{ student.name }}</a></td>
+                    {% for req in pending_requests %}
+                    <tr class="row-item" data-date="{{ req.from_date_raw }}">
+                        <td><a class="clickable-name" onclick="openStudentModal('{{ req.student_id }}')">{{ req.student_name }}</a><br><small>{{ req.roll_number }}</small></td>
+                        <td><span class="badge {{ req.leave_type }}">{{ req.leave_type }}</span></td>
+                        <td><span class="duration-tag">{{ req.duration }} Days</span></td>
+                        <td><small>L:{{ req.month_leaves or 0 }} | OD:{{ req.month_ods or 0 }}</small></td>
+                        <td style="font-size: 11px;">{{ req.from_date }} to {{ req.to_date }}</td>
                         <td>
-                            <div style="font-size: 12px; color: #475569;">
-                                <b>Primary:</b> {{ student.system_mentor_name or 'None' }}<br>
-                                <b>Co-Mentor:</b> {{ student.system_co_mentor_name or 'None' }}
-                            </div>
-                        </td>
-                        <td>
-                            <button class="action-btn btn-edit" onclick="openMentorModal('{{ student.id }}', '{{ student.roll_number }}', '{{ student.name }}', '{{ student.mentor_id or '' }}', '{{ student.co_mentor_id or '' }}')">
-                                ✏️ Edit Mentors
-                            </button>
+                            <form action="/staff/action" method="POST" style="display:inline;">
+                                <input type="hidden" name="request_id" value="{{ req.id }}">
+                                <button type="submit" name="action" value="approved" class="action-btn btn-approve">Approve</button>
+                                <button type="button" class="action-btn btn-reject" onclick="rejectRequest({{ req.id }})">Reject</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% endif %}
-    </div>
 
-    <form id="reject-form" action="/staff/action" method="POST" style="display: none;">
-        <input type="hidden" name="request_id" id="reject_req_id">
-        <input type="hidden" name="action" value="rejected">
-        <input type="hidden" name="rejection_reason" id="reject_reason">
-    </form>
-    
-    <div id="mentorModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeMentorModal()">&times;</span>
-            <h3 style="margin-top: 0;">Edit Mentors</h3>
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Updating mentors for: <strong id="modalStudentName" style="color: black;"></strong></p>
-            
-            <form action="/staff/update-student-mentor" method="POST">
-                <input type="hidden" name="student_id" id="modalStudentId">
-                <div class="form-group">
-                    <label>Primary Mentor</label>
-                    <select name="mentor_id" id="modalPrimaryMentor">
-                        <option value="">-- None --</option>
-                        {% for staff in all_mentors %}
-                            <option value="{{ staff.id }}">{{ staff.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Co-Mentor</label>
-                    <select name="co_mentor_id" id="modalCoMentor">
-                        <option value="">-- None --</option>
-                        {% for staff in all_mentors %}
-                            <option value="{{ staff.id }}">{{ staff.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="action-btn btn-approve" style="width: 100%; padding: 12px; margin-top: 10px;">Save Changes</button>
-            </form>
+        <div id="history" class="tab-content">
+            <div class="filter-bar">
+                <div class="filter-group" style="flex-grow: 1;"><label>Search</label><input type="text" id="histSearch" onkeyup="filterHistoryLive()" placeholder="Roll No or Name..."></div>
+                <div class="filter-group"><label>Batch</label><select id="histBatch" onchange="filterHistoryLive()"><option value="">All</option><option value="2023">2023</option><option value="2024">2024</option></select></div>
+                <div class="filter-group"><label>Sec</label><select id="histSection" onchange="filterHistoryLive()"><option value="">All</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                <div class="filter-group"><label>Date</label><input type="date" id="histDate" onchange="filterHistoryLive()"></div>
+            </div>
+            <div id="staffHistoryContent"></div>
+        </div>
+
+        {% if session.is_cp %}
+        <div id="class" class="tab-content">
+            <div class="csv-box" style="border-left: 4px solid #ef4444;">
+                <h3 style="margin-top: 0; color: #b91c1c;">📝 Manual Leave Entry</h3>
+                <p style="font-size: 13px; color: #64748b;">Use this for phone calls or uninformed absences.</p>
+                <form action="/staff/mark-absent" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="filter-group"><label>From</label><input type="date" name="from_date" required></div>
+                    <div class="filter-group"><label>To</label><input type="date" name="to_date" required></div>
+                    <div class="filter-group">
+                        <label>Type</label>
+                        <select name="entry_type">
+                            <option value="informed">Informed (Call)</option>
+                            <option value="uninformed">Uninformed (Absent)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="flex-grow: 1;"><label>Roll Numbers</label><input type="text" name="absent_roll_numbers" placeholder="23UCS001, 23UCS045" required></div>
+                    <button type="submit" class="action-btn btn-reject" style="height: 38px;">Submit Entry</button>
+                </form>
+            </div>
+
+            <div class="csv-box">
+                <h3 style="margin-top: 0;">📤 Upload Class Roster</h3>
+                <p style="font-size: 13px; color: #64748b;">Upload an Excel file to update student names, parent mobiles, and mentors.</p>
+                <form action="/staff/bulk-assign" method="POST" enctype="multipart/form-data" style="display: flex; align-items: center; gap: 15px;">
+                    <input type="file" name="excel_file" accept=".xlsx, .xls" required style="font-size: 13px;">
+                    <button type="submit" class="action-btn btn-approve">Preview Excel Data</button>
+                </form>
+            </div>
+
+            <h2>Class Roster ({{ session.year }} - {{ session.section }})</h2>
+            <table>
+                <thead><tr><th>Roll Number</th><th>Name</th><th>Primary Mentor</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for student in class_list %}
+                    <tr>
+                        <td><strong>{{ student.roll_number }}</strong></td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.system_mentor_name or 'Not Assigned' }}</td>
+                        <td><button class="action-btn" style="background: #6366f1; font-size: 12px;" onclick="openStudentModal('{{ student.id }}')">View Profile</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div id="mentees" class="tab-content">
+            <h2>My Direct Mentees</h2>
+            <table>
+                <thead><tr><th>Roll Number</th><th>Name</th><th>Batch/Section</th></tr></thead>
+                <tbody>
+                    {% for student in mentee_list %}
+                    <tr>
+                        <td><strong>{{ student.roll_number }}</strong></td>
+                        <td><a class="clickable-name" onclick="openStudentModal('{{ student.id }}')">{{ student.name }}</a></td>
+                        <td>{{ student.batch_year }} / {{ student.section }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
     <div id="studentDetailsModal" class="modal">
-        <div class="modal-content large">
+        <div class="modal-content">
             <span class="close-btn" onclick="closeStudentModal()">&times;</span>
-            <h3 style="margin-top: 0; margin-bottom: 5px;" id="sdName">Loading...</h3>
-            <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 20px;" id="sdDetails">Fetching details...</p>
-            
-            <h4 style="border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">Leave History</h4>
-            
-            <input type="text" id="historySearch" placeholder="🔍 Search by reason, date, or status..." onkeyup="filterHistory()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 15px; box-sizing: border-box;">
-            
-            <div style="max-height: 350px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr><th>Type</th><th>Dates</th><th>Reason</th><th>Status</th></tr>
-                    </thead>
-                    <tbody id="sdHistoryBody">
-                        </tbody>
-                </table>
-                <p id="sdNoHistory" style="text-align: center; color: #94a3b8; display: none; padding: 30px;">No previous leave history found.</p>
-            </div>
+            <h2 id="sdName"></h2><p id="sdDetails"></p><hr>
+            <table style="font-size: 13px;">
+                <thead><tr><th>Type</th><th>Duration</th><th>Dates</th><th>Status</th></tr></thead>
+                <tbody id="sdHistoryBody"></tbody>
+            </table>
         </div>
     </div>
 
+    <form id="reject-form" action="/staff/action" method="POST" style="display: none;">
+        <input type="hidden" name="request_id" id="reject_req_id"><input type="hidden" name="action" value="rejected"><input type="hidden" name="rejection_reason" id="reject_reason">
+    </form>
+
     <script>
-        // Tab switching logic
+        let fullHistoryData = [];
         function showTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             element.classList.add('active');
+            if(tabId === 'history') loadStaffActionHistory();
         }
 
-        // Leave rejection logic
-        function rejectRequest(id) {
-            let reason = prompt("Please enter a reason for rejection:");
-            if (reason != null && reason.trim() !== "") {
-                document.getElementById('reject_req_id').value = id;
-                document.getElementById('reject_reason').value = reason;
-                document.getElementById('reject-form').submit();
-            } else if (reason != null) { alert("You must provide a reason to reject."); }
+        function filterTable(tableId, inputId) {
+            let input = document.getElementById(inputId).value.toUpperCase();
+            let rows = document.querySelector(`#${tableId} tbody`).rows;
+            for (let row of rows) { row.style.display = row.textContent.toUpperCase().includes(input) ? "" : "none"; }
         }
 
-        // Mentor Edit Modal Logic
-        const mentorModal = document.getElementById('mentorModal');
-        function openMentorModal(studentId, rollNumber, studentName, primaryMentor, coMentor) {
-            document.getElementById('modalStudentName').innerText = studentName + " (" + rollNumber + ")";
-            document.getElementById('modalStudentId').value = studentId;
-            document.getElementById('modalPrimaryMentor').value = primaryMentor;
-            document.getElementById('modalCoMentor').value = coMentor;
-            mentorModal.style.display = 'block';
-        }
-        function closeMentorModal() { mentorModal.style.display = 'none'; }
-
-        // --- NEW: Student Details Modal Logic ---
-        const studentModal = document.getElementById('studentDetailsModal');
-        
-        async function openStudentModal(studentId) {
-            // Reset modal state
-            document.getElementById('sdName').innerText = 'Loading...';
-            document.getElementById('sdDetails').innerText = '';
-            document.getElementById('sdHistoryBody').innerHTML = '';
-            document.getElementById('sdNoHistory').style.display = 'none';
-            document.getElementById('historySearch').value = ''; 
-            studentModal.style.display = 'block';
-
-            try {
-                // Fetch the API data you will create in app.py
-                const response = await fetch(`/staff/student-details/${studentId}`);
-                const data = await response.json();
-                
-                if (data.student) {
-                    document.getElementById('sdName').innerText = data.student.name;
-                    document.getElementById('sdDetails').innerText = `${data.student.roll_number} | Batch ${data.student.batch_year} - Sec ${data.student.section}`;
-                }
-                
-                const tbody = document.getElementById('sdHistoryBody');
-                
-                if (data.history && data.history.length > 0) {
-                    data.history.forEach(req => {
-                        // Color coding based on status
-                        let isApproved = req.status.includes('approved');
-                        let statusColor = isApproved ? '#166534' : '#991b1b';
-                        let statusBg = isApproved ? '#dcfce7' : '#fee2e2';
-                        let statusText = isApproved ? 'Approved' : 'Rejected';
-                        
-                        tbody.innerHTML += `
-                            <tr class="history-row">
-                                <td><span class="badge" style="background: #f1f5f9; color: #475569;">${req.leave_type.toUpperCase()}</span></td>
-                                <td style="font-size: 13px;">${req.from_date} to ${req.to_date}</td>
-                                <td style="font-size: 13px;">${req.reason}</td>
-                                <td><span class="badge" style="background: ${statusBg}; color: ${statusColor};">${statusText}</span></td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    document.getElementById('sdNoHistory').style.display = 'block';
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                document.getElementById('sdName').innerText = 'Error loading data';
-            }
+        function filterTableByDate(tableId, dateId) {
+            let filterDate = document.getElementById(dateId).value;
+            let rows = document.querySelectorAll(`#${tableId} .row-item`);
+            rows.forEach(row => { row.style.display = (!filterDate || row.getAttribute('data-date') === filterDate) ? "" : "none"; });
         }
 
-        function closeStudentModal() { studentModal.style.display = 'none'; }
+        function resetFilters(tableId, ids) {
+            ids.forEach(id => document.getElementById(id).value = "");
+            document.querySelectorAll(`#${tableId} tr`).forEach(r => r.style.display = "");
+        }
 
-        // --- NEW: Live Search Filter for History ---
-        function filterHistory() {
-            let input = document.getElementById('historySearch').value.toLowerCase();
-            let rows = document.querySelectorAll('.history-row');
-            
-            rows.forEach(row => {
-                let text = row.innerText.toLowerCase();
-                row.style.display = text.includes(input) ? '' : 'none';
+        async function loadStaffActionHistory() {
+            const res = await fetch('/staff/my-history');
+            fullHistoryData = await res.json();
+            renderHistory(fullHistoryData);
+        }
+
+        function filterHistoryLive() {
+            const search = document.getElementById('histSearch').value.toUpperCase();
+            const batch = document.getElementById('histBatch').value;
+            const section = document.getElementById('histSection').value.toUpperCase();
+            const date = document.getElementById('histDate').value;
+            const filtered = fullHistoryData.filter(h => {
+                return (h.student_name.toUpperCase().includes(search) || h.roll_number.toUpperCase().includes(search)) &&
+                       (!batch || String(h.batch_year) === batch) &&
+                       (!section || h.section.toUpperCase() === section) &&
+                       (!date || h.from_date_raw === date);
             });
+            renderHistory(filtered);
         }
 
-        // Global Close for both Modals
-        window.onclick = function(event) {
-            if (event.target == mentorModal) { closeMentorModal(); }
-            if (event.target == studentModal) { closeStudentModal(); }
+        function renderHistory(data) {
+            const container = document.getElementById('staffHistoryContent');
+            if (data.length === 0) { container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 40px;">No records found.</p>'; return; }
+            let html = `<table><thead><tr><th>Student</th><th>Duration</th><th>Dates</th><th>Action</th></tr></thead><tbody>`;
+            data.forEach(h => {
+                let badge = h.final_status.includes('reject') ? 'rejected' : 'approved';
+                html += `<tr><td><strong>${h.student_name}</strong><br><small>${h.roll_number}</small></td><td>${h.duration} Days</td><td>${h.from_date_clean}</td><td><span class="badge ${badge}">${h.final_status}</span></td></tr>`;
+            });
+            container.innerHTML = html + '</tbody></table>';
         }
+
+        async function openStudentModal(studentId) {
+            document.getElementById('studentDetailsModal').style.display = 'block';
+            const res = await fetch(`/staff/student-details/${studentId}`);
+            const data = await res.json();
+            document.getElementById('sdName').innerText = data.student.name;
+            document.getElementById('sdDetails').innerText = data.student.roll_number;
+            let html = '';
+            data.history.forEach(h => { html += `<tr><td>${h.leave_type}</td><td>${h.duration} Days</td><td>${h.from_date_clean}</td><td>${h.status}</td></tr>`; });
+            document.getElementById('sdHistoryBody').innerHTML = html;
+        }
+
+        function closeStudentModal() { document.getElementById('studentDetailsModal').style.display = 'none'; }
+        function rejectRequest(id) {
+            let r = prompt("Reason:");
+            if(r) { document.getElementById('reject_req_id').value = id; document.getElementById('reject_reason').value = r; document.getElementById('reject-form').submit(); }
+        }
+        window.onclick = function(e) { if(e.target.className === 'modal') closeStudentModal(); }
     </script>
 </body>
 </html>
