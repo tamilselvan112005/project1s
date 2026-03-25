@@ -1,7 +1,7 @@
 import os
 import math
 import pandas as pd
-import pg8000.native
+
 import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
