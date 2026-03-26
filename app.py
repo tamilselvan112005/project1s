@@ -73,38 +73,62 @@ def login():
             cur.close()
             conn.close()
     return render_template('login.html')
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name, email = request.form.get('name'), request.form.get('email')
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
         password = generate_password_hash(request.form.get('password'))
+        
+        # Proper boolean handling for checkboxes
         is_mentor = request.form.get('is_mentor') == 'on'
-        is_cp, is_cocp = request.form.get('is_chairperson') == 'on', request.form.get('is_cochairperson') == 'on'
+        is_cp = request.form.get('is_chairperson') == 'on'
+        is_cocp = request.form.get('is_cochairperson') == 'on'
         is_hod = request.form.get('is_hod') == 'on'
-        batch_year = request.form.get('batch_year')
+        
+        batch_year = request.form.get('batch_year') or None
         section = request.form.get('section') or None
 
         conn = get_db_connection()
         cur = conn.cursor()
+        
         try:
+            # 1. First, try to insert the staff member
             cur.execute('''
                 INSERT INTO staff (name, email, password, is_mentor, is_chairperson, is_cochairperson, is_hod, batch_year, section) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
             ''', (name, email, password, is_mentor, is_cp, is_cocp, is_hod, batch_year, section))
             new_id = cur.fetchone()[0]
-            clean_name = name.replace('.', ' ')
-            search_name = f"%{max(clean_name.split(), key=len)}%"
-            cur.execute("UPDATE students SET mentor_id = %s WHERE excel_mentor_name ILIKE %s AND mentor_id IS NULL", (new_id, search_name))
-            conn.commit()
-            flash('Registered successfully!', 'success')
-            return redirect(url_for('login'))
-        except: 
-            flash('Registration failed. Email might already exist.', 'error')
-        finally: 
-            cur.close(); conn.close()
-    return render_template('register.html')
 
+            # 2. Try the Auto-Match (Wrapped in its own logic to prevent crashes)
+            if name:
+                clean_name = name.replace('.', ' ')
+                name_parts = clean_name.split()
+                if name_parts:
+                    search_name = f"%{max(name_parts, key=len)}%"
+                    cur.execute("""
+                        UPDATE students 
+                        SET mentor_id = %s 
+                        WHERE excel_mentor_name ILIKE %s AND mentor_id IS NULL
+                    """, (new_id, search_name))
+            
+            conn.commit()
+            flash('Registered successfully! Please login.', 'success')
+            return redirect(url_for('login'))
+
+        except psycopg2.errors.UniqueViolation:
+            conn.rollback()
+            flash('This email address is already registered.', 'error')
+        except Exception as e:
+            conn.rollback()
+            # This will show you the ACTUAL error in your terminal
+            print(f"Registration Error: {e}") 
+            flash('An unexpected error occurred. Please try again.', 'error')
+        finally: 
+            cur.close()
+            conn.close()
+
+    return render_template('register.html')
 # ==========================================
 # STAFF ROUTES
 # ==========================================
